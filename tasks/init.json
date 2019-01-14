@@ -1,0 +1,15 @@
+{
+  "description": "Unlock puppet agent runs exceeding runtimeout or runinterval",
+  "input_method": "stdin",
+  "parameters": {
+    "delete": {
+      "description": "Kill the puppet agent process and delete the lock file",
+      "type": "Optional[String]"
+    },
+    "restart": {
+      "description": "Force a restart of the puppet service",
+      "type": "Optional[String]"
+    }
+  },
+  "supports_noop": false
+}
