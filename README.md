@@ -79,17 +79,15 @@ Duration: 4 sec
 The task can be run locally, such as via a cron job or scheduled task, on the command line:
 
 ```bash
-unlock_puppet.rb
-```
-
-```
+[root@pe-master]# unlock_puppet.rb
 {"status":"success","result":"unlocking puppet service, runtime 86400 exceeds runtimeout 3600 or runinterval 1800, killing puppet agent process, deleting lock file"}
 ```
 
 Specify task parameters via command line options:
 
 ```bash
-unlock_puppet.rb --delete --restart
+[root@pe-master]# unlock_puppet.rb --delete --restart
+{"status":"success","result":"unlocking puppet service, stopping puppet service, killing puppet agent process, deleting lock file, starting puppet service"}
 ```
 
 This is valuable as a preventive measure, to reset puppet on problem nodes ... until you resolve the root cause.
@@ -108,8 +106,8 @@ scheduled_task { 'unlock_puppet':
   enabled   => true,
   command   => 'c:\path\to\unlock_puppet.rb',
   trigger   => {
-    schedule         => 'daily',
-    start_time       => '04:00',
+    schedule   => 'daily',
+    start_time => '04:00',
   }
 }
 ```
