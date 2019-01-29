@@ -76,7 +76,7 @@ Duration: 4 sec
 
 ## Alternate Usage
 
-The task can be run locally, such as via a cron job or scheduled task, on the command line:
+The script executed by the task can be run locally on the command line:
 
 ```bash
 [root@pe-master]# unlock_puppet.rb
@@ -90,27 +90,15 @@ Specify task parameters via command line options:
 {"status":"success","result":"unlocking puppet service, stopping puppet service, killing puppet agent process, deleting lock file, starting puppet service"}
 ```
 
+The script can be scheduled via a cron job or scheduled task:
+
+```puppet
+node 'pe-agent' {
+  include unlock_puppet
+}
+```
+
 This is valuable as a preventive measure, to reset puppet on problem nodes ... until you resolve the root cause.
-
-```puppet
-cron { 'unlock_puppet':
-  command => '/path/to/unlock_puppet.rb',
-  user    => 'root',
-  hour    => 4,
-}
-```
-
-```puppet
-scheduled_task { 'unlock_puppet':
-  ensure    => present,
-  enabled   => true,
-  command   => 'c:\path\to\unlock_puppet.rb',
-  trigger   => {
-    schedule   => 'daily',
-    start_time => '04:00',
-  }
-}
-```
 
 ## Getting Help
 
