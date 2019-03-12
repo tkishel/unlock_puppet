@@ -42,6 +42,21 @@ Job completed. 1/1 nodes succeeded.
 Duration: 1 sec
 ```
 
+Rather than specifying the nodes directly via `--nodes` you could use `--query`:
+
+```
+# Calculate a `not-responding` datestamp
+export CUTOFF_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ" -d "-$(puppet config print runinterval) seconds")
+
+# Validate the datestamp using `puppet query`:
+date
+echo $CUTOFF_DATE
+puppet query "nodes { report_timestamp < '$CUTOFF_DATE' }"
+
+# Run the task with the query
+puppet task run unlock_puppet delete=true restart=true --query "nodes { report_timestamp < '$CUTOFF_DATE' }"
+```
+
 ## Reference
 
 ### Parameters
