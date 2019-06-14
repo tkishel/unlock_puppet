@@ -70,9 +70,11 @@ end
 
 def stop_puppet_agent_process(run_pid)
   return if run_pid.zero?
-  return if Facter.value(:os)['family'] == 'windows'
-  `kill -9 #{run_pid}`
-  $?
+  if Facter.value(:os)['family'] == 'windows'
+    `taskkill /f /pid #{run_pid}`
+  else
+    `kill -9 #{run_pid}`
+  end
 end
 
 begin
@@ -90,7 +92,7 @@ begin
       stop_puppet_agent_process(run_pid)
       report << 'deleting lock file'
       File.delete(lockfile)
-      raise Puppet::Error('unable to delete lock file') if File.file?(lockfile)
+      raise StandardError('unable to delete lock file') if File.file?(lockfile)
     else
       run_time = (Time.now - File.stat(lockfile).mtime).to_i
       if (run_time > runtimeout) || (run_time > runinterval)
@@ -99,7 +101,7 @@ begin
         stop_puppet_agent_process(run_pid)
         report << 'deleting lock file'
         File.delete(lockfile)
-        raise Puppet::Error('unable to delete lock file') if File.file?(lockfile)
+        raise StandardError('unable to delete lock file') if File.file?(lockfile)
       end
     end
   else
@@ -120,7 +122,7 @@ begin
   if puppet_service_enabled_and_stopped || runinterval_restart || force_delete || force_restart
     report << 'starting puppet service'
     command = start_puppet_service
-    raise Puppet::Error('unable to start puppet service') unless command.exitstatus.zero?
+    raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
   end
 
   result['status'] = 'success'

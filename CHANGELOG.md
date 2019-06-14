@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release 1.0.4
+
+- clarify documentation
+
+## Release 1.0.3
+
+- update windows support
+
 ## Release 1.0.2
 
 - document query
