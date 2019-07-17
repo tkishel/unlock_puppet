@@ -3,6 +3,7 @@
 #### Table of Contents
 
 1. [Description](#description)
+1. [Setup](#setup)
 1. [Usage - Basic](#usage)
 1. [Reference - Parameters](#reference)
 1. [Alternate Usage](#alternate-usage)
@@ -10,17 +11,29 @@
 
 ## Description
 
-This module provides the `unlock_puppet` task.
+This module provides an `unlock_puppet` class and task that ...
 
-This task allows you unlock puppet agent runs exceeding the configured `runtimeout` or `runinterval`.
+* Kills `puppet agent` runs exceeding the configured `runinterval` or `runtimeout`.
+* Restarts the `Puppet Agent` service (if it is enabled) if the last run report exceeds the configured `runinterval`.
 
-This is valuable when a puppet agent process is locked, and/or the puppet service needs to be started or restarted.
+This is valuable when a puppet agent process is locked, and/or the puppet service needs to be restarted.
+
+## Setup
+
+* Install the module.
 
 ## Usage
 
-Install the module.
+### Automated Enforcement
 
-Use the `puppet task run` command, specifying the task and the nodes you need to unlock:
+* Install the module
+* Apply the `unlock_puppet` class to a node
+
+The `unlock_puppet` class will create a cron job (or scheduled task) to resolve a locked `puppet agent` process or a stopped `Puppet Agent` service.
+
+### Ad-Hoc Enforcement
+
+* Use the `puppet task run` command
 
 ```bash
 puppet task run unlock_puppet --nodes agent.example.com
@@ -35,25 +48,25 @@ Nodes: 1
 
 Started on agent.example.com ...
 Finished on node agent.example.com
-  result : unlocking puppet service, runtime 86400 exceeds runtimeout 3600 or runinterval 1800, killing puppet agent process, deleting lock file
+  result : checking puppet agent process and service, puppet agent process lock file age 86400 exceeds runinterval 1800 or runtimeout 3600, killing puppet agent process, deleting puppet agent process lock file
   status : success
 
 Job completed. 1/1 nodes succeeded.
 Duration: 1 sec
 ```
 
-Rather than specifying the nodes directly via `--nodes` you could use `--query`:
+Rather than specifying the nodes directly via `--nodes` you could use `--query` to query for nodes than have not reported recently:
 
 ```
-# Calculate a `not-responding` datestamp
+# calculate a `not-responding` datestamp
 export CUTOFF_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ" -d "-$(puppet config print runinterval) seconds")
 
-# Validate the datestamp using `puppet query`:
+# validate the datestamp using `puppet query`:
 date
 echo $CUTOFF_DATE
 puppet query "nodes { report_timestamp < '$CUTOFF_DATE' }"
 
-# Run the task with the query
+# run the task with the query
 puppet task run unlock_puppet --query "nodes { report_timestamp < '$CUTOFF_DATE' }"
 ```
 
@@ -61,20 +74,20 @@ puppet task run unlock_puppet --query "nodes { report_timestamp < '$CUTOFF_DATE'
 
 ### Parameters
 
-#### delete
+#### force_agent
 
 Boolean, default: false
 
-Ignore `runtimeout` or `runinterval`, kill the puppet agent process, and delete its lock file.
+Ignore `runinterval` and `runtimeout`, kill the puppet agent process, and delete its lock file.
 
-#### restart
+#### force_service
 
 Boolean, default: false
 
-Ignore `runtimeout` or `runinterval`, and restart the puppet service.
+Ignore `runinterval` and `runtimeout`, and restart the puppet service (even if it is not enabled).
 
 ```bash
-[root@master]# puppet task run unlock_puppet --nodes agent.example.com delete=true restart=true
+[root@master]# puppet task run unlock_puppet --nodes agent.example.com force_agent=true force_service=true
 Starting job ...
 Note: The task will run only on permitted nodes.
 New job ID: 2
@@ -82,7 +95,7 @@ Nodes: 1
 
 Started on agent.example.com ...
 Finished on node agent.example.com
-  result : unlocking puppet service, stopping puppet service, killing puppet agent process, deleting lock file, starting puppet service
+  result : checking puppet agent process and service, stopping puppet service, killing puppet agent process, deleting puppet agent process lock file, starting puppet service
   status : success
 
 Job completed. 1/1 nodes succeeded.
@@ -91,24 +104,18 @@ Duration: 4 sec
 
 ## Alternate Usage
 
-The script executed by this task can be extracted from this module and run locally on the command line:
+The script executed by this task can be extracted from the `files` directory of this module and run locally on the command line:
 
 ```bash
 [root@agent]# /usr/local/bin/unlock_puppet.rb
-{"status":"success","result":"unlocking puppet service, runtime 86400 exceeds runtimeout 3600 or runinterval 1800, killing puppet agent process, deleting lock file"}
+{"status":"success","result":"checking puppet agent process and service, puppet agent process lock file age 86400 exceeds runinterval 1800 or runtimeout 3600, killing puppet agent process, deleting lock file"}
 ```
 
 The script accepts the same parameters as the task via the following command line options:
 
 ```bash
-[root@agent]# /usr/local/bin/unlock_puppet.rb --delete --restart
-{"status":"success","result":"unlocking puppet service, stopping puppet service, killing puppet agent process, deleting lock file, starting puppet service"}
-```
-
-Executing the script in a cron job (or scheduled task) can be a valuable preventive measure to keep Puppet running on problem nodes ... until you identify and resolve the root cause of Puppet agent runs locking, and/or the Puppet service stopping.
-
-```
-0 4 * * * /usr/local/bin/unlock_puppet.rb
+[root@agent]# /usr/local/bin/unlock_puppet.rb --force_agent --force_service
+{"status":"success","result":"checking puppet agent process and service, stopping puppet service, killing puppet agent process, deleting puppet agent process lock file, starting puppet service"}
 ```
 
 ## Getting Help

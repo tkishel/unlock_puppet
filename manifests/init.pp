@@ -1,38 +1,49 @@
-# Configure a cron or scheduled task to keep the puppet agent service running.
+# Configure a cron or scheduled task to keep puppet running.
 #
-# @summary Keep the puppet agent service running.
+# @summary Keep puppet running.
 
 class unlock_puppet {
 
-  $posix_script   = '/opt/puppetlabs/puppet/bin/unlock_puppet.rb'
-  $windows_batch  = 'C:/ProgramData/PuppetLabs/puppet/unlock_puppet.bat'
+  $posixes_script = '/opt/puppetlabs/puppet/bin/unlock_puppet.rb'
   $windows_script = 'C:/ProgramData/PuppetLabs/puppet/unlock_puppet.rb'
+  $windows_batch  = 'C:/ProgramData/PuppetLabs/puppet/unlock_puppet.bat'
 
   if ($facts['os']['family'] == 'windows') {
-    file { 'unlock puppet batch':
-      path   => $windows_batch,
-      source => 'puppet:///modules/unlock_puppet/unlock_puppet.bat',
-      mode   => '0755'
-    }
     $unlock_puppet_script = $windows_script
-    scheduled_task { 'unlock puppet':
-      command => $windows_batch,
-      trigger => { schedule   => 'daily', start_time => '04:00' },
-      require => [ File['unlock puppet batch'], File['unlock puppet script']],
-    }
   } else {
-    $unlock_puppet_script = $posix_script
-    cron { 'unlock puppet':
-      command => $unlock_puppet_script,
-      user    => 'root',
-      hour    => '4',
-      minute  => '0',
-      require => File['unlock puppet script'],
-    }
+    $unlock_puppet_script = $posixes_script
   }
+
   file { 'unlock puppet script':
     path   => $unlock_puppet_script,
     source => 'puppet:///modules/unlock_puppet/unlock_puppet.rb',
     mode   => '0755'
   }
+
+  if ($facts['os']['family'] == 'windows') {
+    file { 'unlock puppet batch script':
+      path   => $windows_batch,
+      source => 'puppet:///modules/unlock_puppet/unlock_puppet.bat',
+      mode   => '0755'
+    }
+    scheduled_task { 'unlock puppet':
+      command => $windows_batch,
+      trigger => {
+        schedule         => 'daily',
+        start_time       => '04:15',
+        minutes_interval => '60',
+        minutes_duration => '720',
+      },
+      require => [ File['unlock puppet batch script'], File['unlock puppet script']],
+    }
+  } else {
+    cron { 'unlock puppet':
+      command => $unlock_puppet_script,
+      user    => 'root',
+      hour    => '*',
+      minute  => '15',
+      require => File['unlock puppet script'],
+    }
+  }
+
 }

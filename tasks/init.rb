@@ -1,8 +1,12 @@
 #!/opt/puppetlabs/puppet/bin/ruby
 
+# unlock_puppet/tasks/init.rb and unlock_puppet/files/unlock_puppet are identical
+
 require 'json'
 require 'facter'
 require 'puppet'
+
+####
 
 def read_params
   options = {}
@@ -12,20 +16,20 @@ def read_params
     end
   rescue Timeout::Error
     require 'optparse'
-    options['delete'] = false
-    options['restart'] = 'false'
+    options['force_process'] = 'false'
+    options['force_service'] = 'false'
     parser = OptionParser.new do |opts|
       opts.banner = 'Usage: unlock_puppet.rb [options]'
       opts.separator ''
-      opts.separator 'Summary: Unlock puppet agent runs exceeding runtimeout or runinterva'
+      opts.separator 'Summary: Unlock puppet agent runs exceeding runinterval or runtimeout'
       opts.separator ''
       opts.separator 'Options:'
       opts.separator ''
-      opts.on('--delete', 'Kill the puppet agent process and delete the lock file') do
-        options['delete'] = 'true'
+      opts.on('--force_process', 'Force a kill of the puppet agent process, and delete its lock file') do
+        options['force_process'] = 'true'
       end
-      opts.on('--restart', 'Force a restart of the puppet service') do
-        options['restart'] = 'true'
+      opts.on('--force_service', 'Force a restart of the puppet service') do
+        options['force_service'] = 'true'
       end
       opts.on('-h', '--help', 'Display help') do
         puts opts
@@ -40,8 +44,8 @@ end
 
 params = read_params
 
-force_delete  = params['delete'] == 'true'
-force_restart = params['restart'] == 'true'
+force_process = params['force_process'] == 'true'
+force_service = params['force_service'] == 'true'
 
 Puppet.initialize_settings
 
@@ -53,76 +57,100 @@ runtimeout    = Puppet[:runtimeout]  || 1800
 result = {}
 report = []
 
-def puppet_service_enabled_and_stopped
-  result = `puppet resource service puppet`
-  result.include?('true') && result.include?('stopped')
-end
+####
 
-def start_puppet_service
-  `puppet resource service puppet ensure=running`
-  $?
-end
-
-def stop_puppet_service
-  `puppet resource service puppet ensure=stopped`
-  $?
-end
-
-def stop_puppet_agent_process(run_pid)
+def kill_process(run_pid)
   return if run_pid.zero?
   if Facter.value(:os)['family'] == 'windows'
     `taskkill /f /pid #{run_pid}`
   else
     `kill -9 #{run_pid}`
   end
+  $?
 end
 
-begin
-  report << 'unlocking puppet service'
+def stop_service(service)
+  `puppet resource service #{service} ensure=stopped`
+  $?
+end
 
-  if force_delete || force_restart
+def start_service(service)
+  `puppet resource service #{service} ensure=running`
+  $?
+end
+
+def service_status(service)
+  result = `puppet resource service #{service}`
+end
+
+def service_enabled(status)
+  status.include?('true')
+end
+
+def service_running(status)
+  status.include?('running')
+end
+
+####
+
+begin
+  report << 'checking puppet agent process and service'
+
+  if force_service
     report << 'stopping puppet service'
-    stop_puppet_service
+    stop_service('puppet')
   end
 
   if File.file?(lockfile)
     run_pid = File.read(lockfile).to_i
-    if force_delete
+    if force_process
       report << 'killing puppet agent process'
-      stop_puppet_agent_process(run_pid)
-      report << 'deleting lock file'
-      File.delete(lockfile)
-      raise StandardError('unable to delete lock file') if File.file?(lockfile)
+      kill_process(run_pid)
+      if File.file?(lockfile)
+        report << 'deleting puppet agent process lock file'
+        File.delete(lockfile) if File.file?(lockfile)
+        raise StandardError('unable to delete puppet agent process lock file') if File.file?(lockfile)
+      end
     else
-      run_time = (Time.now - File.stat(lockfile).mtime).to_i
-      if (run_time > runtimeout) || (run_time > runinterval)
-        report << "runtime #{run_time} exceeds runtimeout #{runtimeout} or runinterval #{runinterval}"
+      lockfile_age = (Time.now - File.stat(lockfile).mtime).to_i
+      if lockfile_age > runinterval || lockfile_age > runtimeout
+        report << "puppet agent process lock file age #{lockfile_age} exceeds runinterval #{runinterval} or runtimeout #{runtimeout}"
         report << 'killing puppet agent process'
-        stop_puppet_agent_process(run_pid)
-        report << 'deleting lock file'
-        File.delete(lockfile)
-        raise StandardError('unable to delete lock file') if File.file?(lockfile)
+        kill_process(run_pid)
+        if File.file?(lockfile)
+          report << 'deleting puppet agent process lock file'
+          File.delete(lockfile) if File.file?(lockfile)
+          raise StandardError('unable to delete puppet agent process lock file') if File.file?(lockfile)
+        end
       end
     end
-  else
-    report << 'lock file absent'
   end
 
-  runinterval_restart = false
-  if File.file?(lastrunreport)
-    lastrun = (Time.now - File.stat(lastrunreport).mtime).to_i
-    if lastrun > runinterval
-      report << "time since last run #{lastrun} exceeds runinterval #{runinterval}"
-      runinterval_restart = true
-    end
-  else
-    report << 'last run report absent'
-  end
-
-  if puppet_service_enabled_and_stopped || runinterval_restart || force_delete || force_restart
+  if force_service
     report << 'starting puppet service'
-    command = start_puppet_service
+    command = start_service('puppet')
     raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
+  else
+    if service_enabled(service_status('puppet'))
+      if File.file?(lastrunreport)
+        lastrunreport_age = (Time.now - File.stat(lastrunreport).mtime).to_i
+        if lastrunreport_age > runinterval
+          report << "last run report age #{lastrunreport_age} exceeds runinterval #{runinterval}"
+          report << 'stopping puppet service'
+          stop_service('puppet')
+          report << 'starting puppet service'
+          command = start_service('puppet')
+          raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
+        end
+      else
+        report << 'last run report absent'
+        report << 'stopping puppet service'
+        stop_service('puppet')
+        report << 'starting puppet service'
+         command = start_service('puppet')
+        raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
+      end
+    end
   end
 
   result['status'] = 'success'

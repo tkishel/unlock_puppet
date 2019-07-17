@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release 2.0.0
+
+- refactor
+- rename parameters
+- document classes
+- adjust schedules
+
 ## Release 1.0.4
 
 - clarify documentation
