@@ -1,6 +1,6 @@
 {
   "name": "tkishel-unlock_puppet",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "author": "Tom Kishel",
   "summary": "Unlock puppet agent runs exceeding runtimeout or runinterval",
   "license": "Apache-2.0",
