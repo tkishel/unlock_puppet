@@ -80,7 +80,7 @@ def start_service(service)
 end
 
 def service_status(service)
-  result = `puppet resource service #{service}`
+  `puppet resource service #{service}`
 end
 
 def service_enabled(status)
@@ -130,26 +130,24 @@ begin
     report << 'starting puppet service'
     command = start_service('puppet')
     raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
-  else
-    if service_enabled(service_status('puppet'))
-      if File.file?(lastrunreport)
-        lastrunreport_age = (Time.now - File.stat(lastrunreport).mtime).to_i
-        if lastrunreport_age > runinterval
-          report << "last run report age #{lastrunreport_age} exceeds runinterval #{runinterval}"
-          report << 'stopping puppet service'
-          stop_service('puppet')
-          report << 'starting puppet service'
-          command = start_service('puppet')
-          raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
-        end
-      else
-        report << 'last run report absent'
+  elsif service_enabled(service_status('puppet'))
+    if File.file?(lastrunreport)
+      lastrunreport_age = (Time.now - File.stat(lastrunreport).mtime).to_i
+      if lastrunreport_age > runinterval
+        report << "last run report age #{lastrunreport_age} exceeds runinterval #{runinterval}"
         report << 'stopping puppet service'
         stop_service('puppet')
         report << 'starting puppet service'
-         command = start_service('puppet')
+        command = start_service('puppet')
         raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
       end
+    else
+      report << 'last run report absent'
+      report << 'stopping puppet service'
+      stop_service('puppet')
+      report << 'starting puppet service'
+      command = start_service('puppet')
+      raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
     end
   end
 
