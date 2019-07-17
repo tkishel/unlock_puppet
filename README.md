@@ -20,13 +20,12 @@ This is valuable when a puppet agent process is locked, and/or the puppet servic
 
 ## Setup
 
-* Install the module.
+* Install the module
 
 ## Usage
 
 ### Automated Enforcement
 
-* Install the module
 * Apply the `unlock_puppet` class to a node
 
 The `unlock_puppet` class will create a cron job (or scheduled task) to resolve a locked `puppet agent` process or a stopped `Puppet Agent` service.
@@ -55,7 +54,7 @@ Job completed. 1/1 nodes succeeded.
 Duration: 1 sec
 ```
 
-Rather than specifying the nodes directly via `--nodes` you could use `--query` to query for nodes than have not reported recently:
+Rather than specifying the nodes directly via `--nodes` you could use `--query` to query for nodes than have not reported within a cutoff:
 
 ```
 # calculate a `not-responding` datestamp
