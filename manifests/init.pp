@@ -1,8 +1,6 @@
-# Configure a cron or scheduled task to keep puppet running.
-#
-# @summary Keep puppet running.
-
-class unlock_puppet {
+class unlock_puppet (
+  Enum[present, absent] $ensure = present,
+) {
 
   $posixes_script = '/opt/puppetlabs/puppet/bin/unlock_puppet.rb'
   $windows_script = 'C:/ProgramData/PuppetLabs/puppet/unlock_puppet.rb'
@@ -15,6 +13,7 @@ class unlock_puppet {
   }
 
   file { 'unlock puppet script':
+    ensure => $ensure,
     path   => $unlock_puppet_script,
     source => 'puppet:///modules/unlock_puppet/unlock_puppet.rb',
     mode   => '0755'
@@ -22,15 +21,17 @@ class unlock_puppet {
 
   if ($facts['os']['family'] == 'windows') {
     file { 'unlock puppet batch script':
+      ensure => $ensure,
       path   => $windows_batch,
       source => 'puppet:///modules/unlock_puppet/unlock_puppet.bat',
       mode   => '0755'
     }
     scheduled_task { 'unlock puppet':
+      ensure => $ensure,
       command => $windows_batch,
       trigger => {
         schedule         => 'daily',
-        start_time       => '04:15',
+        start_time	 => '04:15',
         minutes_interval => '60',
         minutes_duration => '720',
       },
@@ -38,6 +39,7 @@ class unlock_puppet {
     }
   } else {
     cron { 'unlock puppet':
+      ensure => $ensure,
       command => $unlock_puppet_script,
       user    => 'root',
       hour    => '*',

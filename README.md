@@ -28,7 +28,11 @@ This is valuable when a puppet agent process is locked, and/or the puppet servic
 
 * Apply the `unlock_puppet` class to a node
 
-The `unlock_puppet` class will create a cron job (or scheduled task) to resolve a locked `puppet agent` process or a stopped `Puppet Agent` service.
+```puppet
+include unlock_puppet
+```
+
+The `unlock_puppet` class will create a cron job (or scheduled task) to resolve a locked `puppet agent` process, and/or a stopped `Puppet Agent` service.
 
 ### Ad-Hoc Enforcement
 
@@ -56,7 +60,7 @@ Duration: 1 sec
 
 Rather than specifying the nodes directly via `--nodes` you could use `--query` to query for nodes than have not reported within a cutoff:
 
-```
+```bash
 # calculate a `not-responding` datestamp
 export CUTOFF_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ" -d "-$(puppet config print runinterval) seconds")
 
@@ -71,7 +75,23 @@ puppet task run unlock_puppet --query "nodes { report_timestamp < '$CUTOFF_DATE'
 
 ## Reference
 
-### Parameters
+### Class Parameters
+
+Note that class parameter(s) are only necessary for resource-like class declarations, which are only necessary to uninstall the resources of this module.
+
+#### ensure
+
+Data type: String
+
+This parameter is optional, with valid options of 'present' (the default) and 'absent'.
+
+To uninstall the cron job (or scheduled task) apply the class using a resource-like class declaration:
+
+```
+class { 'unlock_puppet': ensure => absent }
+```
+
+### Task Parameters
 
 #### force_agent
 
