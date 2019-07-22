@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release 2.0.3
+
+- use maximum of runinterval or runtimeout
+
 ## Release 2.0.2
 
 - add an ensure parameter to allow uninstalls of the module

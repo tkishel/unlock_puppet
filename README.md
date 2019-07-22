@@ -13,8 +13,8 @@
 
 This module provides an `unlock_puppet` class and task that ...
 
-* Kills `puppet agent` runs exceeding the configured `runinterval` or `runtimeout`.
-* Restarts the `Puppet Agent` service (if it is enabled) if the last run report exceeds the configured `runinterval`.
+* Kills `puppet agent` runs exceeding the maximum of `runinterval` or `runtimeout`.
+* Restarts the `Puppet Agent` service (if it is enabled) if the last run report exceeds the maximum of `runinterval` or `runtimeout`.
 
 This is valuable when a puppet agent process is locked, and/or the puppet service needs to be restarted.
 
