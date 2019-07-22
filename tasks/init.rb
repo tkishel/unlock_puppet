@@ -113,7 +113,7 @@ begin
       end
     else
       lockfile_age = (Time.now - File.stat(lockfile).mtime).to_i
-      if lockfile_age > runinterval || lockfile_age > runtimeout
+      if lockfile_age > [runinterval, runtimeout].max
         report << "puppet agent process lock file age #{lockfile_age} exceeds runinterval #{runinterval} or runtimeout #{runtimeout}"
         report << 'killing puppet agent process'
         kill_process(run_pid)
@@ -136,8 +136,9 @@ begin
     if service_running(puppet_service_status)
       if File.file?(lastrunreport)
         lastrunreport_age = (Time.now - File.stat(lastrunreport).mtime).to_i
-        if lastrunreport_age > runinterval
-          report << "last run report age #{lastrunreport_age} exceeds runinterval #{runinterval}"
+        # Either [runinterval, runtimeout].max or runinterval
+        if lastrunreport_age > [runinterval, runtimeout].max
+          report << "last run report age #{lastrunreport_age} exceeds runinterval #{runinterval} or runtimeout #{runtimeout}"
           report << 'stopping puppet service'
           stop_service('puppet')
           report << 'starting puppet service'
