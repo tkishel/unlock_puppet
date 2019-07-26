@@ -59,23 +59,50 @@ report = []
 
 ####
 
-def kill_process(run_pid)
-  return if run_pid.zero?
+def write_log(message)
+  message.tr!('"', "'")
   if Facter.value(:os)['family'] == 'windows'
-    `taskkill /f /pid #{run_pid}`
+    `powershell.exe " If ([System.Diagnostics.EventLog]::SourceExists(\"Unlock Puppet\") -eq $False) { New-EventLog -Source \"Unlock Puppet\" -LogName Application } "`
+    `powershell.exe " Write-EventLog -Source \"Unlock Puppet\" -LogName Application -EntryType Information -EventID 1234 -Message \"unlock_puppet: #{message}\" "`
   else
-    `kill -9 #{run_pid}`
+    `logger -p local3.info "#{message}"`
   end
-  $?
 end
 
-def stop_service(service)
-  `puppet resource service #{service} ensure=stopped`
-  $?
+def kill_process(pid)
+  return if pid.zero?
+  if Facter.value(:os)['family'] == 'windows'
+    `taskkill /f /pid #{pid}`
+  else
+    `kill -9 #{pid}`
+  end
 end
 
 def start_service(service)
   `puppet resource service #{service} ensure=running`
+  $?
+end
+
+def stop_service(service)
+  if Facter.value(:os)['family'] != 'windows'
+    `puppet resource service #{service} ensure=stopped`
+    return $?
+  end
+  result = `SC QUERY #{service} | FIND "STATE"`
+  if $?.exitstatus.zero?
+    service_state = result.split(' ').last.chomp
+    if service_state == 'START_PENDING' || service_state == 'STOP_PENDING'
+      result = `SC QUERYEX #{service} | FIND "PID"`
+      if $?.exitstatus.zero?
+        service_pid = result.split(' ').last.chomp.to_i
+        if service_pid > 0
+          kill_process(service_pid)
+          return $?
+        end
+      end
+    end
+  end
+  `SC STOP #{service}`
   $?
 end
 
@@ -84,11 +111,11 @@ def service_status(service)
 end
 
 def service_enabled(status)
-  status.include?('true')
+  status.downcase.include?('true')
 end
 
 def service_running(status)
-  status.include?('running')
+  status.downcase.include?('running')
 end
 
 ####
