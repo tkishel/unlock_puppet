@@ -181,6 +181,8 @@ begin
         raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
       end
     else
+      # status = puppet_service_status.match(/ensure.*?,/m).to_s.split("'")[1]
+      # report << "puppet service status: #{status}"
       report << 'puppet service not running'
       report << 'stopping puppet service'
       stop_service('puppet')
@@ -190,13 +192,22 @@ begin
     end
   end
 
+  # To enable notifications, create unlock_notify.rb in this directory, containing a unlock_notify(result) method.
+  # The unlock_notify(result) method must accept one parameter: the 'result' hash.
+  notify_library = File.join(__dir__, 'unlock_notify.rb')
+  if File.file?(notify_library)
+    require notify_library
+  end
+
   result['status'] = 'success'
+  unlock_notify(result) if defined?(unlock_notify)
   result['result'] = report.join(', ')
   puts result.to_json
   exit 0
 rescue StandardError => e
   result['status'] = 'failure'
   result['result'] = "ENV: #{ENV.inspect}"
+  unlock_notify(result) if defined?(unlock_notify)
   result['_error'] = { msg: e.message, kind: 'service/unlock_puppet', details: {} }
   puts result.to_json
   exit 1
