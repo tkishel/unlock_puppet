@@ -1,6 +1,7 @@
 #!/opt/puppetlabs/puppet/bin/ruby
 
-# unlock_puppet/tasks/init.rb and unlock_puppet/files/unlock_puppet are identical
+# unlock_puppet/tasks/init.rb and unlock_puppet/files/unlock_puppet.rb are similar,
+# except that the task does not interact with the pxp-agent service, and raises errors.
 
 require 'json'
 require 'facter'

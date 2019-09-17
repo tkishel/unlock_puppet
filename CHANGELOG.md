@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release 2.0.5
+
+- manage the pxp-agent service, except when run as a task
+
 ## Release 2.0.4
 
 - handle windows service start_pending and stop_pending states

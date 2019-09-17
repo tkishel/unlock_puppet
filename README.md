@@ -15,8 +15,9 @@ This module provides an `unlock_puppet` class and task that ...
 
 * Kills `puppet agent` runs exceeding the maximum of `runinterval` or `runtimeout`.
 * Restarts the `Puppet Agent` service (if it is enabled) if the last run report exceeds the maximum of `runinterval` or `runtimeout`.
+* Restarts the `Puppet Agent` and/or `PXP Agent` service if it is not running.
 
-This is valuable when a puppet agent process is locked, and/or the puppet service needs to be restarted.
+This is valuable when a puppet agent process is locked, and/or the puppet or pxp-agent service needs to be restarted.
 
 ## Setup
 
@@ -32,9 +33,11 @@ This is valuable when a puppet agent process is locked, and/or the puppet servic
 include unlock_puppet
 ```
 
-The `unlock_puppet` class will create a cron job (or scheduled task) to resolve a locked `puppet agent` process, and/or a stopped `Puppet Agent` service.
+The `unlock_puppet` class will create a cron job (or scheduled task) to resolve a locked `puppet agent` process, and/or a stopped `Puppet Agent` or `PXP Agent` service.
 
 ### Ad-Hoc Enforcement
+
+The `unlock_puppet` task resolve a locked `puppet agent` process, and/or a stopped `Puppet Agent` service, but will not resolve a stopped `PXP Agent` service.
 
 * Use the `puppet task run` command
 

@@ -1,6 +1,7 @@
 #!/opt/puppetlabs/puppet/bin/ruby
 
-# unlock_puppet/tasks/init.rb and unlock_puppet/files/unlock_puppet are identical
+# unlock_puppet/tasks/init.rb and unlock_puppet/files/unlock_puppet.rb are similar,
+# except that the task does not interact with the pxp-agent service, and raises errors.
 
 require 'json'
 require 'facter'
@@ -28,7 +29,7 @@ def read_params
       opts.on('--force_process', 'Force a kill of the puppet agent process, and delete its lock file') do
         options['force_process'] = 'true'
       end
-      opts.on('--force_service', 'Force a restart of the puppet service') do
+      opts.on('--force_service', 'Force a restart of the puppet and pxp-agent service') do
         options['force_service'] = 'true'
       end
       opts.on('-h', '--help', 'Display help') do
@@ -121,11 +122,13 @@ end
 ####
 
 begin
-  report << 'checking puppet agent process and service'
+  report << 'checking puppet agent process, and puppet and pxp-agent services'
 
   if force_service
     report << 'stopping puppet service'
     stop_service('puppet')
+    report << 'stopping pxp-agent service'
+    stop_service('pxp-agent')
   end
 
   if File.file?(lockfile)
@@ -136,7 +139,7 @@ begin
       if File.file?(lockfile)
         report << 'deleting puppet agent process lock file'
         File.delete(lockfile) if File.file?(lockfile)
-        raise StandardError('unable to delete puppet agent process lock file') if File.file?(lockfile)
+        report << 'unable to delete puppet agent process lock file' if File.file?(lockfile)
       end
     else
       lockfile_age = (Time.now - File.stat(lockfile).mtime).to_i
@@ -147,48 +150,68 @@ begin
         if File.file?(lockfile)
           report << 'deleting puppet agent process lock file'
           File.delete(lockfile) if File.file?(lockfile)
-          raise StandardError('unable to delete puppet agent process lock file') if File.file?(lockfile)
+          report << 'unable to delete puppet agent process lock file' if File.file?(lockfile)
         end
       end
     end
   end
 
   puppet_service_status = service_status('puppet')
+  pxp_agent_service_status = service_status('pxp-agent')
 
   if force_service
     report << 'starting puppet service'
     command = start_service('puppet')
-    raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
-  elsif service_enabled(puppet_service_status)
-    if service_running(puppet_service_status)
-      if File.file?(lastrunreport)
-        lastrunreport_age = (Time.now - File.stat(lastrunreport).mtime).to_i
-        # Either [runinterval, runtimeout].max or runinterval
-        if lastrunreport_age > [runinterval, runtimeout].max
-          report << "last run report age #{lastrunreport_age} exceeds runinterval #{runinterval} or runtimeout #{runtimeout}"
+    report <<'unable to start puppet service' unless command.exitstatus.zero?
+    report << 'starting pxp-agent service'
+    command = start_service('pxp-agent')
+    report <<'unable to start pxp-agent service' unless command.exitstatus.zero?
+  else
+    # Puppet Service
+    if service_enabled(puppet_service_status)
+      if service_running(puppet_service_status)
+        if File.file?(lastrunreport)
+          lastrunreport_age = (Time.now - File.stat(lastrunreport).mtime).to_i
+          # Either [runinterval, runtimeout].max or runinterval
+          if lastrunreport_age > [runinterval, runtimeout].max
+            report << "last run report age #{lastrunreport_age} exceeds runinterval #{runinterval} or runtimeout #{runtimeout}"
+            report << 'stopping puppet service'
+            stop_service('puppet')
+            report << 'starting puppet service'
+            command = start_service('puppet')
+            report << 'unable to start puppet service' unless command.exitstatus.zero?
+          end
+        else
+          report << 'last run report absent'
           report << 'stopping puppet service'
           stop_service('puppet')
           report << 'starting puppet service'
           command = start_service('puppet')
-          raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
+          report << 'unable to start puppet service' unless command.exitstatus.zero?
         end
       else
-        report << 'last run report absent'
+        # status = puppet_service_status.match(/ensure.*?,/m).to_s.split("'")[1]
+        # report << "puppet service status: #{status}"
+        report << 'puppet service not running'
         report << 'stopping puppet service'
         stop_service('puppet')
         report << 'starting puppet service'
         command = start_service('puppet')
-        raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
+        report << 'unable to start puppet service' unless command.exitstatus.zero?
       end
-    else
-      # status = puppet_service_status.match(/ensure.*?,/m).to_s.split("'")[1]
-      # report << "puppet service status: #{status}"
-      report << 'puppet service not running'
-      report << 'stopping puppet service'
-      stop_service('puppet')
-      report << 'starting puppet service'
-      command = start_service('puppet')
-      raise StandardError('unable to start puppet service') unless command.exitstatus.zero?
+    end
+    # PXP Agent Service
+    if service_enabled(pxp_agent_service_status)
+      unless service_running(pxp_agent_service_status)
+        # status = pxp_agent_service_status.match(/ensure.*?,/m).to_s.split("'")[1]
+        # report << "pxp-agent service status: #{status}"
+        report << 'pxp-agent service not running'
+        report << 'stopping pxp-agent service'
+        stop_service('pxp-agent')
+        report << 'starting pxp-agent service'
+        command = start_service('pxp-agent')
+        report << 'unable to start pxp-agent service' unless command.exitstatus.zero?
+      end
     end
   end
 
