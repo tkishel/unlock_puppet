@@ -1,7 +1,8 @@
 #!/opt/puppetlabs/puppet/bin/ruby
 
 # unlock_puppet/tasks/init.rb and unlock_puppet/files/unlock_puppet.rb are similar,
-# except that the task does not interact with the pxp-agent service, and raises errors.
+# except that the task does not interact with the pxp-agent service, and raises errors,
+# and the script does not read JSON from STDIN.
 
 require 'json'
 require 'facter'
@@ -11,11 +12,8 @@ require 'puppet'
 
 def read_params
   options = {}
-  begin
-    Timeout.timeout(2) do
-      options = JSON.parse(STDIN.read)
-    end
-  rescue Timeout::Error
+  script = true
+  if script == true
     require 'optparse'
     options['force_process'] = 'false'
     options['force_service'] = 'false'
