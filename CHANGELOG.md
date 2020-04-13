@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release 2.0.6
+
+- do not read STDIN in the script executed by cron
+
 ## Release 2.0.5
 
 - manage the pxp-agent service, except when run as a task
