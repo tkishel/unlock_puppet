@@ -58,6 +58,10 @@ report = []
 
 ####
 
+def puppet_binary
+  (Facter.value(:os)['family'] == 'windows') ? 'puppet' : '/opt/puppetlabs/bin/puppet'
+end
+
 def write_log(message)
   message.tr!('"', "'")
   if Facter.value(:os)['family'] == 'windows'
@@ -78,35 +82,35 @@ def kill_process(pid)
 end
 
 def start_service(service)
-  `puppet resource service #{service} ensure=running`
+  `#{puppet_binary} resource service #{service} ensure=running`
   $?
 end
 
 def stop_service(service)
-  if Facter.value(:os)['family'] != 'windows'
-    `puppet resource service #{service} ensure=stopped`
-    return $?
-  end
-  result = `SC QUERY #{service} | FIND "STATE"`
-  if $?.exitstatus.zero?
-    service_state = result.split(' ').last.chomp
-    if service_state == 'START_PENDING' || service_state == 'STOP_PENDING'
-      result = `SC QUERYEX #{service} | FIND "PID"`
-      if $?.exitstatus.zero?
-        service_pid = result.split(' ').last.chomp.to_i
-        if service_pid > 0
-          kill_process(service_pid)
-          return $?
+  if Facter.value(:os)['family'] == 'windows'
+    result = `SC QUERY #{service} | FIND "STATE"`
+    if $?.exitstatus.zero?
+      service_state = result.split(' ').last.chomp
+      if service_state == 'START_PENDING' || service_state == 'STOP_PENDING'
+        result = `SC QUERYEX #{service} | FIND "PID"`
+        if $?.exitstatus.zero?
+          service_pid = result.split(' ').last.chomp.to_i
+          if service_pid > 0
+            kill_process(service_pid)
+            return $?
+          end
         end
       end
     end
+    `SC STOP #{service}`
+  else
+    `#{puppet_binary} resource service #{service} ensure=stopped`
   end
-  `SC STOP #{service}`
   $?
 end
 
 def service_status(service)
-  `puppet resource service #{service}`
+  `#{puppet_binary} resource service #{service}`
 end
 
 def service_enabled(status)
