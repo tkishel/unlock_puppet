@@ -121,7 +121,9 @@ Style/IfUnlessModifier:
 Style/SymbolProc:
   Enabled: false
 #
+Metrics/BlockNesting:
+  Max: 6
+Style/MultipleComparison:
+  Enabled: false
 Style/SpecialGlobalVars:
   Enabled: false
-Metrics/BlockNesting:
-  Max: 5

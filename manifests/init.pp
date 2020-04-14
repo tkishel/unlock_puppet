@@ -1,3 +1,5 @@
+# Unlock a locked Puppet Service
+
 class unlock_puppet (
   Enum[present, absent] $ensure = present,
 ) {
@@ -27,11 +29,11 @@ class unlock_puppet (
       mode   => '0755'
     }
     scheduled_task { 'unlock puppet':
-      ensure => $ensure,
+      ensure  => $ensure,
       command => $windows_batch,
       trigger => {
         schedule         => 'daily',
-        start_time	 => '04:15',
+        start_time       => '04:15',
         minutes_interval => '60',
         minutes_duration => '720',
       },
@@ -39,7 +41,7 @@ class unlock_puppet (
     }
   } else {
     cron { 'unlock puppet':
-      ensure => $ensure,
+      ensure  => $ensure,
       command => $unlock_puppet_script,
       user    => 'root',
       hour    => '*',

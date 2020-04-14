@@ -164,10 +164,10 @@ begin
   if force_service
     report << 'starting puppet service'
     command = start_service('puppet')
-    report <<'unable to start puppet service' unless command.exitstatus.zero?
+    report << 'unable to start puppet service' unless command.exitstatus.zero?
     report << 'starting pxp-agent service'
     command = start_service('pxp-agent')
-    report <<'unable to start pxp-agent service' unless command.exitstatus.zero?
+    report << 'unable to start pxp-agent service' unless command.exitstatus.zero?
   else
     # Puppet Service
     if service_enabled(puppet_service_status)
