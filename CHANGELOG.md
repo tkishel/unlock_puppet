@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Release 2.0.8
+
+- resolve lint and rubocop issues
+
 ## Release 2.0.7
 
 - specify the full path to the puppet binary
